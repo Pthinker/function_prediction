@@ -112,7 +112,6 @@ def MFGO(network, annotated_genes, adjacency):
                     sum += adjacency[gene][other_gene] * gene_configures[other_gene][i]
                 new_config[i] = sum
             normalize(new_config)
-            logging.info(new_config)
             d = distance(new_config, gene_configures[gene])
             if d > threshold:
                 gene2update = gene
@@ -123,7 +122,6 @@ def MFGO(network, annotated_genes, adjacency):
             logging.info(gene2update)
             logging.info(d)
 
-    logging.info(gene_configures)
     logging.info("--------------------------------------")
 
 
@@ -153,7 +151,29 @@ def cross_validation(network, network_annotated_genes, gene_annotation, adjacenc
                 annotated_gene_cv[gene] = network_annotated_genes[gene]
         print "%d genes annotated and %d genes to predict as test" % ( len(annotated_gene_cv), len(removed_genes) )
 
-        MFGO(network, annotated_gene_cv, adjacency)
+        #MFGO(network, annotated_gene_cv, adjacency)
+        MFGO_java(network, annotated_gene_cv, i)
+
+
+def MFGO_java(network, annotated_genes, cv):
+    if not os.path.exists("network.txt"):
+        fh = open("network.txt", "w")
+        for edge in network.edges():
+            fh.write("%s\t%s\n" % (edge[0], edge[1]))
+        fh.close()
+    annotation_fpath = "mfgo_annotation%d.dat" % cv
+    fh = open(annotation_fpath, "w")
+    for gene in annotated_genes:
+        for func in annotated_genes[gene]:
+            fh.write("%s\t%s\n" % (gene, func))
+    for gene in network.nodes():
+        if not gene in annotated_genes:
+            fh.write("%s\tunclassified\n" % gene)
+    fh.close()
+
+    out = "mfgo_out%d.out" % cv
+    command = "java mfgom.mfgom network.txt %s %s" % (annotation_fpath, out)
+    os.system(command)
 
 
 def main():
@@ -161,27 +181,30 @@ def main():
 
     ontology = dag.DAG(config.go_fpath)
 
-    gene_annotation = utils.get_annotation(config.annotation_fpath, config.filtered_annotation_fpath, ontology.get_root().id)
+    #gene_annotation = utils.get_annotation(config.annotation_fpath, config.filtered_annotation_fpath, ontology.get_root().id)
+    gene_annotation = utils.get_slim_annotation(config.annotation_fpath, ontology.get_root().id)
 
     network = utils.create_network(config.network_fpath)
     print "Number of nodes in network: %d" % network.number_of_nodes()
+
     # Remove individual nodes by getting the largest indepedent connected component
     network = nx.connected_component_subgraphs(network)[0]
     print "Number of nodes in network after removing individual genes: %d" % network.number_of_nodes()
-    #print "Number of edges in network after removing individual genes:%d" % network.number_of_edges()
+    print "Number of edges in network after removing individual genes:%d" % network.number_of_edges()
 
-    # Annotated genes in the network
+    # Get annotated genes in the network
     network_annotated_genes = {}
     for node in network.nodes():
         if node in gene_annotation:
             network_annotated_genes[node] = gene_annotation[node]
     print "Number of annotated genes in network:%d" % len(network_annotated_genes)
 
+    '''
     # adjacency matrix of any pair of nodes base on their neighbour sharing property
     adjacency = adjacency_matrix(network, config.mfgo_adj_fpath)
 
     cross_validation(network, network_annotated_genes, gene_annotation, adjacency)
-
+    '''
 
 if __name__ == "__main__":
     main()

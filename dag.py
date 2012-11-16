@@ -10,6 +10,7 @@ def after_colon(line):
     # macro for getting anything after the :
     return line.split(":", 1)[1].strip()
 
+
 def read_until(handle, start):
     # read each line until it has a certain start, and then puts the start tag back
     while 1:
@@ -251,6 +252,7 @@ class DAG:
 def main():
     dag = DAG(config.go_fpath)
 
+
 if __name__ == "__main__":
     main()
-    
+

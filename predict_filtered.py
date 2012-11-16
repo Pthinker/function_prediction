@@ -12,11 +12,8 @@ from dag import *
 
 
 def evaluate(predicted_genes, removed_genes):
-    #print "Removed %d genes" % len(removed_genes)
-    #print "Predicted %d genes" % len(predicted_genes)
-
-    recall_avg = 0.0;
-    precision_avg = 0.0;
+    recall_avg = 0.0
+    precision_avg = 0.0
 
     recall_size = len(removed_genes)
     precision_size = len(removed_genes)
@@ -41,7 +38,6 @@ def evaluate(predicted_genes, removed_genes):
                 if sim > max_sim:
                     max_sim = sim
             recall_numerator += max_sim
-        #print "recall:%f" % (recall_numerator/recall_base)
         recall_avg += recall_numerator/float(recall_base)
 
         # calculate precision
@@ -56,11 +52,11 @@ def evaluate(predicted_genes, removed_genes):
                 if sim>max_sim:
                     max_sim = sim
             precision_numerator += max_sim
-        #print "precision:%f" % (precision_numerator/precision_base)
-        precision_avg += precision_numerator/precision_base
+        precision_avg += precision_numerator / precision_base
 
     recall_avg /= recall_size
     precision_avg /= precision_size
+
     return recall_avg, precision_avg
 
 
@@ -373,10 +369,9 @@ def remove_predict():
         #predicted_genes = iterate_weighted_predict(network, annotated_gene_cv, sim_cache, sim_terms)
         #predicted_genes = iterate_majority_voting(network, annotated_gene_cv, sim_cache, sim_terms)
         
-        '''
         (recall, precision) = evaluate(predicted_genes, removed_genes)
         print "removednum:%d, recall:%f, precision:%f" % (num,recall, precision)
-        '''
+
 
 def cross_validation():
     group_genes = distribute_cross_validation(network_annotated_gene)
@@ -459,11 +454,13 @@ if __name__ == "__main__":
     network = utils.create_network(config.network_fpath)
     print "Number of nodes in network:%d" % network.number_of_nodes()
 
+    '''
     # Remove unannotated gene from network
     for node in network.nodes():
         if not node in gene_annotation:
             network.remove_node(node)
     print "Number of nodes in network after removing unannotated genes:%d" % network.number_of_nodes()
+    '''
 
     # Remove individual nodes by get the largest indepedent connected component
     network = nx.connected_component_subgraphs(network)[0]
@@ -484,3 +481,4 @@ if __name__ == "__main__":
 
     for GONUMBER in range(1, 11):
         cross_validation()
+

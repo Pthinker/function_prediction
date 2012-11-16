@@ -4,6 +4,7 @@ import threading
 from dag import *
 from multiprocessing import Process
 
+
 class LCAThread(threading.Thread):
     def __init__(self, i, sublist):
         self.id = i
@@ -21,6 +22,7 @@ class LCAThread(threading.Thread):
         ofile.close()
         print "Thread %d finished" % self.id
 
+
 def get_lca(i, sublist):
     print "Thread %d starts running, handle %d terms" % (i, len(sublist))
     ofpath = folder + "lca%d.tsv" % i
@@ -35,6 +37,7 @@ def get_lca(i, sublist):
     ofile.close()
     print "Thread %d finished" % i
 
+
 if __name__ == "__main__":
     THREAD_NUM = 12
     dag = DAG(config.go_fpath)
@@ -47,14 +50,14 @@ if __name__ == "__main__":
     ifile.close()
 
     totalLength = len(terms)
-    subLength = totalLength/THREAD_NUM+1;
+    subLength = totalLength/THREAD_NUM + 1
 
     processes = []
     for i in range(1, THREAD_NUM+1):
         if i==THREAD_NUM:
-            sublist = sub_terms[(i-1)*subLength:]
+            sublist = terms[(i-1)*subLength:]
         else:
-            sublist = sub_terms[(i-1)*subLength : i*subLength]
+            sublist = terms[(i-1)*subLength : i*subLength]
         p = Process(target=get_lca, args=(i, sublist))
         p.start()
         processes.append(p)

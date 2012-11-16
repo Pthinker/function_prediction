@@ -76,6 +76,35 @@ def visualize_node(graph, node):
     plt.show()
 
 
+def get_slim_annotation(fpath, root_term):
+    """ Read annotation using GO slim
+    """
+    annotation = {}
+    fh = open(fpath, "r")
+    for line in fh:
+        if not line.startswith("!"):
+            line = line.strip()
+            arr = line.split("\t")
+            if arr[3].strip()=='P':
+                gene = arr[0].strip()
+                term = arr[5].strip()
+                '''
+                if term == root_term: # Not consider root term
+                    continue
+                else:
+                    if gene in annotation:
+                        annotation[gene].add(term)
+                    else:
+                        annotation[gene] = set([term])
+                '''
+                if gene in annotation:
+                    annotation[gene].add(term)
+                else:
+                    annotation[gene] = set([term])
+    fh.close()
+    return annotation
+
+
 # Get term annotation for proteins from fpath
 # Reture a dict with key as protein and value a list of terms
 def get_annotation(fpath, filtered_fpath, root_term):

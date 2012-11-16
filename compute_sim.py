@@ -4,6 +4,7 @@ import sys
 import os
 import sqlite3
 import thread
+from multiprocessing import Process
 
 import utils
 from dag import *
@@ -63,27 +64,82 @@ def wang_sim(term1, term2):
     return ssum/(sv1+sv2)
 
 
+def modified_wang_sim(term1, term2):
+    #if term1 == term2:
+    #    return 1.0
+
+    node1 = dag.id_node[term1]
+    node2 = dag.id_node[term2]
+
+    sv_dict1 = {term1 : 1}
+    nlist = [node1]
+    while len(nlist) > 0:
+        new_nlist = []
+        for node in nlist:
+            for p in node.parents:
+                value = sv_dict1[node.id] * node._parents[p.id]
+                if p.id in sv_dict1:
+                    if value > sv_dict1[p.id]:
+                        sv_dict1[p.id] = value
+                else:
+                    sv_dict1[p.id] = value
+                new_nlist.append(p)
+        nlist = new_nlist
+
+    sv_dict2 = {term2 : 1}
+    nlist = [node2]
+    while len(nlist) > 0:
+        new_nlist = []
+        for node in nlist:
+            for p in node.parents:
+                value = sv_dict2[node.id] * node._parents[p.id]
+                if p.id in sv_dict2:
+                    if value > sv_dict2[p.id]:
+                        sv_dict2[p.id] = value
+                else:
+                    sv_dict2[p.id] = value
+                new_nlist.append(p)
+        nlist = new_nlist
+
+    set1 = set(sv_dict1.keys())
+    set2 = set(sv_dict2.keys())
+    common_terms = set1.intersection(set2)
+    ssum = 0.0
+    for term in common_terms:
+        ssum += sv_dict1[term] + sv_dict2[term]
+
+    sv1 = 0.0
+    for key in sv_dict1:
+        sv1 += sv_dict1[key]
+
+    sv2 = 0.0
+    for key in sv_dict2:
+        sv2 += sv_dict2[key]
+
+    return ssum/(sv1 + sv2 + 0.1)
+
+
 def lin_sim(term1, term2, lca_list):
-    if term1==term2:
+    if term1 == term2:
         return (1.0, term1)
     max_sim = -1.0
     max_lca = None
     for lca in lca_list:
-        sim = (2*term_ic[lca])/(term_ic[term1]+term_ic[term2])
-        if sim>max_sim:
+        sim = (2 * term_ic[lca]) / (term_ic[term1] + term_ic[term2])
+        if sim > max_sim:
             max_sim = sim
             max_lca = lca
     return (max_sim, max_lca)
 
 
 def resnik_sim(term1, term2, lca_list):
-    if term1==term2:
+    if term1 == term2:
         return (term_ic[term1], term1)
     max_sim = -1.0
     max_lca = None
     for lca in lca_list:
         sim = term_ic[lca]
-        if sim>max_sim:
+        if sim > max_sim:
             max_sim = sim
             max_lca = lca
     return (max_sim, max_lca)
@@ -132,22 +188,38 @@ def get_filtered_term_sim(term_sublist, terms, i):
     print "get_filtered_term_sim%d finished!" % i
 
 
+def compute_wang_sim(subterms, terms, i):
+    print "Starting process %d\n" % i
+    sim_fpath = config.folder + "modified_wang_sim%d.csv" % i
+    ofile = open(sim_fpath, "w")
+    for term1 in subterms:
+        for term2 in terms:
+            sim = modified_wang_sim(term1, term2)
+            ofile.write(term1 + "," + term2 + "," + str(sim) + "\n")
+    ofile.close()
+    print "process %d finished!" % i
+    
+
 # Compute all the pairs of terms similarity
 def compute_sim():
     terms = term_ic.keys()
 
-    totalLength = len(terms)
-    subLength = totalLength/THREAD_NUM+1;
-    for i in range(1, THREAD_NUM+1):
-        if i==THREAD_NUM:
-            sublist = terms[(i-1)*subLength:]
-        else:
-            sublist = terms[(i-1)*subLength : i*subLength]
-        #thread.start_new_thread( get_term_sim, (sublist,i) )
-        thread.start_new_thread( get_filtered_term_sim, (sublist, terms, i) )
+    total_length = len(terms)
+    sub_length = total_length/(THREAD_NUM + 1)
 
-    while 1:
-        pass
+    processes = []
+    for i in range(1, THREAD_NUM+1):
+        if i == THREAD_NUM:
+            sublist = terms[(i-1)*sub_length : ]
+        else:
+            sublist = terms[(i-1)*sub_length : i*sub_length]
+
+        p = Process(target=compute_wang_sim, args=(sublist, terms, i))
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
 
 
 if __name__ == "__main__":
